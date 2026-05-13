@@ -3,15 +3,16 @@ User endpoints using UserService.
 """
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-# from lks_idprovider import AuthContext
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.services.user import UserService
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.core.exceptions import NotFoundError, ConflictError, ValidationError
-# from lks_idprovider_fastapi import requires_role
+
 router = APIRouter()
 
 
@@ -23,7 +24,8 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user_profile(
     user_id: UUID,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get user profile by ID."""
     try:
@@ -36,7 +38,8 @@ def get_user_profile(
 @router.get("/external/{external_id}", response_model=UserResponse)
 def get_user_by_external_id(
     external_id: str,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get user by external identity provider ID."""
     user = service.get_by_external_id(external_id)
@@ -51,7 +54,8 @@ def get_user_by_external_id(
 @router.get("/email/{email}", response_model=UserResponse)
 def get_user_by_email(
     email: str,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get user by email address."""
     user = service.get_by_email(email)
@@ -68,7 +72,8 @@ def sync_user_from_idp(
     external_id: str,
     email: str,
     full_name: Optional[str] = None,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """
     Sync user data from identity provider.
@@ -87,7 +92,8 @@ def sync_user_from_idp(
 def update_user_preferences(
     user_id: UUID,
     user_update: UserUpdate,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Update user preferences."""
     try:
@@ -105,9 +111,9 @@ def update_user_preferences(
 def deactivate_user(
     user_id: UUID,
     service: UserService = Depends(get_user_service),
-    # ctx: AuthContext = Depends(requires_role("admin"))  # COMMENTED OUT - Keycloak disabled
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Deactivate a user account."""
+    """Deactivate a user account. Admin only."""
     try:
         user = service.deactivate_user(user_id)
         return user
@@ -121,9 +127,9 @@ def deactivate_user(
 def reactivate_user(
     user_id: UUID,
     service: UserService = Depends(get_user_service),
-    # ctx: AuthContext = Depends(requires_role("admin"))  # COMMENTED OUT - Keycloak disabled
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Reactivate a user account."""
+    """Reactivate a user account. Admin only."""
     try:
         user = service.reactivate_user(user_id)
         return user

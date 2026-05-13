@@ -1,8 +1,8 @@
 {
-  "realm": "lks",
+  "realm": "tetrics",
   "enabled": true,
-  "displayName": "LKS Realm",
-  "displayNameHtml": "<strong>LKS Realm</strong>",
+  "displayName": "Tetrics Realm",
+  "displayNameHtml": "<strong>Tetrics Realm</strong>",
   "sslRequired": "external",
   "registrationAllowed": true,
   "loginWithEmailAllowed": true,

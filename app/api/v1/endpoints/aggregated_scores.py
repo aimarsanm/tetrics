@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.repositories import AggregatedScoreRepository
 from app.schemas import AggregatedScoreCreate, AggregatedScoreRead, AggregatedScoreUpdate
 
@@ -19,9 +20,10 @@ AGGREGATED_SCORE_NOT_FOUND = "Aggregated score not found"
 @router.post("/", response_model=AggregatedScoreRead)
 def create_aggregated_score(
     schema: AggregatedScoreCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Create a new aggregated score."""
+    """Create a new aggregated score. Admin only."""
     repo = AggregatedScoreRepository(db)
     return repo.create(schema)
 
@@ -30,7 +32,8 @@ def create_aggregated_score(
 def get_aggregated_scores(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get all aggregated scores."""
     repo = AggregatedScoreRepository(db)
@@ -40,7 +43,8 @@ def get_aggregated_scores(
 @router.get("/{score_id}", response_model=AggregatedScoreRead)
 def get_aggregated_score(
     score_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get aggregated score by ID."""
     repo = AggregatedScoreRepository(db)
@@ -57,9 +61,10 @@ def get_aggregated_score(
 def update_aggregated_score(
     score_id: UUID,
     schema: AggregatedScoreUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Update an aggregated score."""
+    """Update an aggregated score. Admin only."""
     repo = AggregatedScoreRepository(db)
     score = repo.update(score_id, schema)
     if not score:
@@ -73,9 +78,10 @@ def update_aggregated_score(
 @router.delete("/{score_id}")
 def delete_aggregated_score(
     score_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Delete an aggregated score."""
+    """Delete an aggregated score. Admin only."""
     repo = AggregatedScoreRepository(db)
     success = repo.delete(score_id)
     if not success:

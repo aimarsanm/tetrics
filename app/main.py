@@ -22,10 +22,6 @@ from app.core.exceptions import (
 from app.core.middleware import RequestLoggingMiddleware
 from app.config.logging import setup_logging
 from app.schemas.base import HealthResponse, ErrorResponse
-# from lks_idprovider_fastapi.dependencies import (
-#     get_auth_context,
-#     get_default_provider,
-# )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi import status
@@ -88,8 +84,6 @@ def create_app() -> FastAPI:
 
     # Add custom middleware
     app.add_middleware(RequestLoggingMiddleware)
-    # app.dependency_overrides[get_default_provider] = settings.get_identity_provider  # COMMENTED OUT - Keycloak disabled
-
     # Include routers
     app.include_router(api_router, prefix="/api/v1")
 

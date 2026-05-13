@@ -11,7 +11,7 @@ import httpx
 
 def get_access_token(username=None, password=None, debug=False):
     """Get access token from Keycloak."""
-    token_url = "http://localhost:8080/realms/lks/protocol/openid-connect/token"
+    token_url = "http://keycloak:8080/realms/tetrics/protocol/openid-connect/token"
     
     data = {
         "client_id": "fastapi-client",

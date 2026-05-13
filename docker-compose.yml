@@ -4,61 +4,90 @@ services:
     image: postgres:15-alpine
     container_name: lks-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DEFAULT_DB}
+      POSTGRES_DB: postgres
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - lks-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DEFAULT_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # One-shot: ensure databases exist before dependent services start
+  db-init:
+    image: postgres:15-alpine
+    container_name: lks-db-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: |
+      /bin/sh -c '
+        for db in lks_database keycloak_db sonarqube; do
+          echo "Checking database $$db..."
+          if psql -h postgres -U "$$PGUSER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='"'"'$$db'"'"'" | grep -q 1; then
+            echo "Database $$db already exists."
+          else
+            echo "Creating database $$db..."
+            psql -h postgres -U "$$PGUSER" -d postgres -c "CREATE DATABASE \"$$db\""
+          fi
+        done
+        echo "All databases ready."
+      '
+    networks:
+      - lks-network
+    restart: "no"
+
   # Keycloak Identity Provider
-  # keycloak:
-  #   image: quay.io/keycloak/keycloak:latest
-  #   container_name: lks-keycloak
-  #   environment:
-  #     KEYCLOAK_ADMIN: admin
-  #     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-  #     KC_DB: postgres
-  #     KC_DB_URL_HOST: postgres
-  #     KC_DB_URL_DATABASE: ${POSTGRES_DEFAULT_DB}
-  #     KC_DB_USERNAME: ${POSTGRES_USER}
-  #     KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
-  #     KC_HOSTNAME_STRICT: false
-  #     KC_HOSTNAME_STRICT_HTTPS: false
-  #     KC_HTTP_ENABLED: true
-  #     KC_METRICS_ENABLED: true
-  #     KC_HEALTH_ENABLED: true
-  #   command:
-  #     - start-dev
-  #     - --import-realm
-  #   ports:
-  #     - "8080:8080"
-  #     - "8443:8443"
-  #   volumes:
-  #     - ./keycloak-config:/opt/keycloak/data/import
-  #     - keycloak_data:/opt/keycloak/data
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - lks-network
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #     start_period: 60s
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: lks-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: keycloak_db
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_METRICS_ENABLED: true
+      KC_HEALTH_ENABLED: true
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import
+      - keycloak_data:/opt/keycloak/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    networks:
+      - lks-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # FastAPI Application
   fastapi-app:
@@ -80,7 +109,7 @@ services:
       
       # Keycloak Configuration
       KEYCLOAK_SERVER_URL: http://keycloak:8080
-      KEYCLOAK_REALM: lks-realm
+      KEYCLOAK_REALM: tetrics
       KEYCLOAK_CLIENT_ID: fastapi-client
       KEYCLOAK_CLIENT_SECRET: fastapi-client-secret-123
       
@@ -101,8 +130,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # keycloak:
-      #   condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
     networks:
       - lks-network
     restart: unless-stopped
@@ -113,56 +144,56 @@ services:
       retries: 3
 
   # SonarQube Community Edition
-  sonarqube:
-    image: sonarqube:community
-    container_name: lks-sonarqube
-    environment:
-      SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
-      SONAR_JDBC_USERNAME: ${POSTGRES_USER}
-      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "9000:9000"
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_logs:/opt/sonarqube/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - lks-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 120s
+  # sonarqube:
+  #   image: sonarqube:community
+  #   container_name: lks-sonarqube
+  #   environment:
+  #     SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/sonarqube
+  #     SONAR_JDBC_USERNAME: ${POSTGRES_USER}
+  #     SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+  #   ports:
+  #     - "9000:9000"
+  #   volumes:
+  #     - sonarqube_data:/opt/sonarqube/data
+  #     - sonarqube_extensions:/opt/sonarqube/extensions
+  #     - sonarqube_logs:/opt/sonarqube/logs
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - lks-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 120s
 
-  # Utils:
-  pgadmin:
-    image: dpage/pgadmin4:9.8.0
-    container_name: pgadmin
-    env_file:
-      - .env
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
-      - PGADMIN_CONFIG_SERVER_MODE=False
-      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
-    ports:
-      - '5050:80'
-    depends_on:
-      - postgres
-    entrypoint: /bin/sh -c "chmod 600 /pgpass; /entrypoint.sh;"
-    user: root
-    configs:
-      - source: servers.json
-        target: /pgadmin4/servers.json
-      - source: pgpass
-        target: /pgpass
-    networks:
-      - lks-network
+  # # Utils:
+  # pgadmin:
+  #   image: dpage/pgadmin4:9.8.0
+  #   container_name: pgadmin
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+  #     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+  #     - PGADMIN_CONFIG_SERVER_MODE=False
+  #     - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+  #   ports:
+  #     - '5050:80'
+  #   depends_on:
+  #     - postgres
+  #   entrypoint: /bin/sh -c "chmod 600 /pgpass; /entrypoint.sh;"
+  #   user: root
+  #   configs:
+  #     - source: servers.json
+  #       target: /pgadmin4/servers.json
+  #     - source: pgpass
+  #       target: /pgpass
+  #   networks:
+  #     - lks-network
 
     
 
