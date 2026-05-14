@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AdminOnlyButton } from '@/components/ui/admin-only-button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ interface EvalTableProps {
   onEditLlmTool: (tool: LLMToolConfiguration) => void;
   /** If true, table is showing a single goal; overall score should be computed only from provided criteria and ignore global totalScore from backend. */
   scopedToSingleGoal?: boolean;
+  canEditTools?: boolean;
 }
 
 // Flatten structure for table rows
@@ -68,7 +70,7 @@ type TableRow = {
   criterionId?: string;
 };
 
-export function EvalTableEnhanced({ criteria, llmTools, scores, measurements, onScoreUpdate, onAddMeasurement, onEditLlmTool, scopedToSingleGoal = false }: Readonly<EvalTableProps>) {
+export function EvalTableEnhanced({ criteria, llmTools, scores, measurements, onScoreUpdate, onAddMeasurement, onEditLlmTool, scopedToSingleGoal = false, canEditTools = true }: Readonly<EvalTableProps>) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
     criteria.reduce((acc, c) => ({ ...acc, [c.id]: true }), {} as Record<string, boolean>)
   );
@@ -238,14 +240,18 @@ export function EvalTableEnhanced({ criteria, llmTools, scores, measurements, on
           </Badge>
           <span className="text-xl font-bold">{tool.toolName}</span>
           <span className="text-sm font-normal text-muted-foreground">{tool.modelVersion}</span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 absolute -top-1 -right-1 opacity-0 group-hover/header:opacity-100"
-            onClick={() => onEditLlmTool(tool)}
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
+          <span className="inline-flex h-6 w-6 absolute -top-1 -right-1 opacity-0 group-hover/header:opacity-100">
+            <AdminOnlyButton 
+              allowed={canEditTools}
+              tooltip="Admin role required to edit LLM tools."
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={() => onEditLlmTool(tool)}
+            >
+              <Edit className="h-3 w-3" />
+            </AdminOnlyButton>
+          </span>
         </div>
       ),
       cell: ({ row }) => {
@@ -296,7 +302,7 @@ export function EvalTableEnhanced({ criteria, llmTools, scores, measurements, on
         modelVersion: tool.modelVersion,
       },
     })),
-  ], [llmTools, expanded, scores, measurements, onAddMeasurement, onEditLlmTool]);
+  ], [llmTools, expanded, scores, measurements, onAddMeasurement, onEditLlmTool, canEditTools]);
 
   const table = useReactTable({
     data: tableData,

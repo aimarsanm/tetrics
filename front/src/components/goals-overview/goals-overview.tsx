@@ -7,8 +7,9 @@ import { GoalsOverviewTable } from './goals-overview-table';
 import { GoalDialog } from './goal-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { AdminOnlyButton } from '@/components/ui/admin-only-button';
+import { PlusCircle } from 'lucide-react';
 import type { 
   EvaluationProgram, 
   Goal, 
@@ -30,6 +31,8 @@ interface GoalsOverviewProps {
 
 export function GoalsOverview({ onGoalSelect }: Readonly<GoalsOverviewProps>) {
   const router = useRouter();
+  const { user, logout } = useAuth();
+  const isAdmin = Boolean(user?.roles?.includes('admin'));
   const [evaluationProgram, setEvaluationProgram] = useState<EvaluationProgram | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [llmTools, setLlmTools] = useState<LLMToolConfiguration[]>([]);
@@ -107,10 +110,23 @@ export function GoalsOverview({ onGoalSelect }: Readonly<GoalsOverviewProps>) {
     loadData(); // Reload all data after successful create/update
   };
 
+  const newGoalButton = (
+    <AdminOnlyButton
+      allowed={isAdmin}
+      tooltip="Admin role required to create goals."
+      onClick={handleCreateGoal}
+    >
+      <PlusCircle className="mr-2 h-4 w-4" />
+      New Goal
+    </AdminOnlyButton>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <Header 
+      <Header
         showActionButtons={false}
+        username={user?.username}
+        onLogout={logout}
       />
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -143,10 +159,7 @@ export function GoalsOverview({ onGoalSelect }: Readonly<GoalsOverviewProps>) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button onClick={handleCreateGoal}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Goal
-                      </Button>
+                      {newGoalButton}
                     </div>
                   </div>
                 </div>
@@ -163,10 +176,7 @@ export function GoalsOverview({ onGoalSelect }: Readonly<GoalsOverviewProps>) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button onClick={handleCreateGoal}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Goal
-                      </Button>
+                      {newGoalButton}
                     </div>
                   </div>
                 </div>
@@ -178,6 +188,7 @@ export function GoalsOverview({ onGoalSelect }: Readonly<GoalsOverviewProps>) {
                 scores={scores}
                 onGoalClick={handleGoalClick}
                 onEditGoal={handleEditGoal}
+                canEdit={isAdmin}
               />
             </>
           )}

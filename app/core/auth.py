@@ -94,9 +94,25 @@ async def get_current_user(
 
         roles = payload.get("realm_access", {}).get("roles", [])
 
+        subject = payload.get("sub")
+        if not subject:
+            subject = payload.get("client_id") or payload.get("azp")
+
+        if not subject:
+            logger.warning(
+                "Token missing subject claim. Available claims: %s",
+                list(payload.keys()),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing subject (sub)",
+            )
+
+        username = payload.get("preferred_username") or payload.get("client_id") or subject
+
         return UserContext(
-            sub=payload["sub"],
-            username=payload.get("preferred_username", ""),
+            sub=subject,
+            username=username,
             email=payload.get("email", ""),
             roles=roles,
         )

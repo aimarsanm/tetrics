@@ -24,6 +24,8 @@ def create_measurement(
     current_user: UserContext = Depends(get_current_user),
 ):
     """Create a new measurement. Any authenticated user can add measures."""
+    if not schema.evaluator:
+        schema.evaluator = current_user.username
     repo = MeasurementRepository(db)
     return repo.create(schema)
 

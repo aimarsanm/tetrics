@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit, ChevronLeft } from 'lucide-react';
+import { AdminOnlyButton } from '@/components/ui/admin-only-button';
+import { PlusCircle, Edit, ChevronLeft, LogOut, User } from 'lucide-react';
 
 interface HeaderProps {
   onAddMeasure?: () => void;
@@ -13,11 +14,14 @@ interface HeaderProps {
   onLogoClick?: () => void;
   /** Whether to show the Add Measure and Edit Context buttons */
   showActionButtons?: boolean;
+  /** Whether admin-only actions are allowed */
+  canManage?: boolean;
+  /** Current authenticated user info */
+  username?: string;
+  onLogout?: () => void;
 }
 
-// ...existing code...
-
-export function Header({ onAddMeasure, onEditContext, onBack, onLogoClick, showActionButtons = true }: Readonly<HeaderProps>) {
+export function Header({ onAddMeasure, onEditContext, onBack, onLogoClick, showActionButtons = true, canManage = true, username, onLogout }: Readonly<HeaderProps>) {
   return (
     <header className="flex items-center justify-between p-4 border-b bg-card shadow-sm sticky top-0 z-10">
       <div className="flex items-center gap-3">
@@ -38,18 +42,43 @@ export function Header({ onAddMeasure, onEditContext, onBack, onLogoClick, showA
           <h1 className="text-xl md:text-2xl font-bold tracking-tight font-headline">Tetrics</h1>
         </button>
       </div>
-      {showActionButtons && onAddMeasure && onEditContext && (
-        <div className="flex items-center gap-2">
-          <Button onClick={onAddMeasure}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Add New Measure</span>
-          </Button>
-          <Button onClick={onEditContext} variant="outline">
-            <Edit className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Edit Context</span>
-          </Button>
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        {showActionButtons && onAddMeasure && onEditContext && (
+          <>
+            <AdminOnlyButton
+              allowed={canManage}
+              tooltip="Admin role required to add LLM tools."
+              onClick={onAddMeasure}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Add New Measure</span>
+            </AdminOnlyButton>
+            <AdminOnlyButton
+              allowed={canManage}
+              tooltip="Admin role required to edit context."
+              onClick={onEditContext}
+              variant="outline"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Edit Context</span>
+            </AdminOnlyButton>
+          </>
+        )}
+        {username && (
+          <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span className="hidden md:inline">{username}</span>
+            </div>
+            {onLogout && (
+              <Button variant="ghost" size="sm" onClick={onLogout} title="Sign out">
+                <LogOut className="h-4 w-4" />
+                <span className="sr-only">Sign out</span>
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </header>
   );
 }

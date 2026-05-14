@@ -34,11 +34,13 @@
       "secret": "fastapi-client-secret-123",
       "redirectUris": [
         "http://localhost:8000/*",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://localhost:9002/*"
       ],
       "webOrigins": [
         "http://localhost:8000",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:9002"
       ],
       "bearerOnly": false,
       "consentRequired": false,
