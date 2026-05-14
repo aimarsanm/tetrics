@@ -11,6 +11,7 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { AdminOnlyButton } from '@/components/ui/admin-only-button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +43,7 @@ interface EditContextSheetProps {
   ) => void;
   readonly onAddCriterion?: () => void;
   readonly onAddMetric?: (criterionId: string) => void;
+  readonly canEdit?: boolean;
 }
 
 export function EditContextSheet({
@@ -53,6 +55,7 @@ export function EditContextSheet({
   onSave,
   onAddCriterion,
   onAddMetric,
+  canEdit = true,
 }: EditContextSheetProps) {
   // Local state for form inputs
   const [orgContext, setOrgContext] = useState('');
@@ -243,13 +246,15 @@ export function EditContextSheet({
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold">Criteria and Metrics</h3>
               {onAddCriterion && (
-                <Button
+                <AdminOnlyButton
+                  allowed={canEdit}
+                  tooltip="Admin role required to add criteria."
                   variant="outline"
                   size="sm"
                   onClick={onAddCriterion}
                 >
                   + Add Criterion
-                </Button>
+                </AdminOnlyButton>
               )}
             </div>
             <Accordion type="multiple" defaultValue={editedCriteria.map(c => c.id)} className="w-full">
@@ -297,13 +302,15 @@ export function EditContextSheet({
                     <div className="flex items-center justify-between mt-4">
                       <h4 className="text-base font-semibold">Metrics</h4>
                       {onAddMetric && (
-                        <Button
+                        <AdminOnlyButton
+                          allowed={canEdit}
+                          tooltip="Admin role required to add metrics."
                           variant="ghost"
                           size="sm"
                           onClick={() => onAddMetric(criterion.id)}
                         >
                           + Add Metric
-                        </Button>
+                        </AdminOnlyButton>
                       )}
                     </div>
                     <div className="space-y-4 pl-4 border-l">
@@ -386,9 +393,14 @@ export function EditContextSheet({
               Cancel
             </Button>
           </SheetClose>
-          <Button onClick={handleSave} type="submit">
+          <AdminOnlyButton
+            allowed={canEdit}
+            tooltip="Admin role required to save changes."
+            onClick={handleSave}
+            type="submit"
+          >
             Save Changes
-          </Button>
+          </AdminOnlyButton>
         </SheetFooter>
       </SheetContent>
     </Sheet>

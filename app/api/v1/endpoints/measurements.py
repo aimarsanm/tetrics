@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.repositories import MeasurementRepository
 from app.schemas import MeasurementCreate, MeasurementRead, MeasurementUpdate
 
@@ -19,9 +20,12 @@ MEASUREMENT_NOT_FOUND = "Measurement not found"
 @router.post("/", response_model=MeasurementRead)
 def create_measurement(
     schema: MeasurementCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
-    """Create a new measurement."""
+    """Create a new measurement. Any authenticated user can add measures."""
+    if not schema.evaluator:
+        schema.evaluator = current_user.username
     repo = MeasurementRepository(db)
     return repo.create(schema)
 
@@ -30,7 +34,8 @@ def create_measurement(
 def get_measurements(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get all measurements."""
     repo = MeasurementRepository(db)
@@ -40,7 +45,8 @@ def get_measurements(
 @router.get("/{measurement_id}", response_model=MeasurementRead)
 def get_measurement(
     measurement_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get measurement by ID."""
     repo = MeasurementRepository(db)
@@ -57,9 +63,10 @@ def get_measurement(
 def update_measurement(
     measurement_id: UUID,
     schema: MeasurementUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Update a measurement."""
+    """Update a measurement. Admin only."""
     repo = MeasurementRepository(db)
     measurement = repo.update(measurement_id, schema)
     if not measurement:
@@ -73,9 +80,10 @@ def update_measurement(
 @router.delete("/{measurement_id}")
 def delete_measurement(
     measurement_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Delete a measurement."""
+    """Delete a measurement. Admin only."""
     repo = MeasurementRepository(db)
     success = repo.delete(measurement_id)
     if not success:

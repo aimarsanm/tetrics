@@ -1,8 +1,8 @@
 {
-  "realm": "lks",
+  "realm": "tetrics",
   "enabled": true,
-  "displayName": "LKS Realm",
-  "displayNameHtml": "<strong>LKS Realm</strong>",
+  "displayName": "Tetrics Realm",
+  "displayNameHtml": "<strong>Tetrics Realm</strong>",
   "sslRequired": "external",
   "registrationAllowed": true,
   "loginWithEmailAllowed": true,
@@ -34,11 +34,13 @@
       "secret": "fastapi-client-secret-123",
       "redirectUris": [
         "http://localhost:8000/*",
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://localhost:9002/*"
       ],
       "webOrigins": [
         "http://localhost:8000",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:9002"
       ],
       "bearerOnly": false,
       "consentRequired": false,

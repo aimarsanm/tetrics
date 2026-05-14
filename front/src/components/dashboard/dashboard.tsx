@@ -8,19 +8,20 @@ import { EvalTableEnhanced } from './eval-table-enhanced';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import type { 
-  EvaluationProgram, 
-  Goal, 
-  EvaluationCriterion, 
-  LLMToolConfiguration, 
+import { useAuth } from '@/contexts/auth-context';
+import type {
+  EvaluationProgram,
+  Goal,
+  EvaluationCriterion,
+  LLMToolConfiguration,
   AggregatedScore,
   Measurement
 } from '@/lib/data';
-import { 
-  fetchEvaluationPrograms, 
-  fetchGoals, 
-  fetchEvaluationCriteria, 
-  fetchLLMToolConfigurations, 
+import {
+  fetchEvaluationPrograms,
+  fetchGoals,
+  fetchEvaluationCriteria,
+  fetchLLMToolConfigurations,
   fetchAggregatedScores,
   fetchMeasurements,
   adaptMeasurementToFrontend
@@ -41,6 +42,8 @@ interface DashboardProps {
 
 export function Dashboard({ goalId }: Readonly<DashboardProps>) {
   const router = useRouter();
+  const { user, logout } = useAuth();
+  const isAdmin = Boolean(user?.roles?.includes('admin'));
   const [evaluationProgram, setEvaluationProgram] = useState<EvaluationProgram | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [criteria, setCriteria] = useState<EvaluationCriterion[]>([]);
@@ -425,7 +428,6 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
 
   const handleAddMeasurement = async (
     value: number,
-    evaluator: string,
     notes: string,
     llmToolConfigId: string,
     metricId: string
@@ -433,17 +435,19 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
     try {
       // Check if we're updating an existing measurement
       const existingMeasurement = selectedMeasurementContext?.existingMeasurement;
-      
+
       console.log('[DEBUG] handleAddMeasurement called');
       console.log('[DEBUG] existingMeasurement:', existingMeasurement);
       console.log('[DEBUG] metricId:', metricId, 'toolId:', llmToolConfigId);
       console.log('[DEBUG] Current measurements in state:', measurements.length);
-      
+
       // Re-derive current measurement from fresh state to avoid stale existingMeasurement
       const currentMeasurement = measurements.find(m => m.metricId === metricId && m.llmToolConfigurationId === llmToolConfigId);
       const isEdit = Boolean(existingMeasurement && currentMeasurement && existingMeasurement.id === currentMeasurement.id);
       console.log('[DEBUG] currentMeasurement (live lookup):', currentMeasurement);
       console.log('[DEBUG] isEdit decision:', isEdit);
+
+      const evaluator = user?.username || 'unknown';
 
       let optimisticMeasurement: Measurement | null = null;
 
@@ -707,11 +711,14 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <Header 
+      <Header
         onAddMeasure={() => setIsAddLlmToolDialogOpen(true)}
         onEditContext={() => setIsEditContextSheetOpen(true)}
         onBack={goalId ? handleBackToGoals : undefined}
         onLogoClick={handleLogoHome}
+        canManage={isAdmin}
+        username={user?.username}
+        onLogout={logout}
       />
       <main className="flex-1 overflow-y-auto px-6 sm:px-8 md:px-12 lg:px-16 py-6">
         <div className="w-full mx-auto space-y-6 max-w-none">
@@ -744,6 +751,7 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
               onScoreUpdate={handleScoreUpdate}
               onAddMeasurement={handleOpenMeasurementDialog}
               onEditLlmTool={handleEditLlmTool}
+              canEditTools={isAdmin}
               scopedToSingleGoal={Boolean(goalId)}
             />
           )}
@@ -768,6 +776,7 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
           metricName={selectedMeasurementContext.metricName}
           toolName={selectedMeasurementContext.toolName}
           existingMeasurement={selectedMeasurementContext.existingMeasurement}
+          evaluator={user?.username || 'unknown'}
         />
       )}
       <EditContextSheet
@@ -779,6 +788,7 @@ export function Dashboard({ goalId }: Readonly<DashboardProps>) {
         onSave={handleContextSave}
         onAddCriterion={handleOpenCriterionDialog}
         onAddMetric={handleOpenMetricDialog}
+        canEdit={isAdmin}
       />
       {goal && (
         <AddCriterionDialog

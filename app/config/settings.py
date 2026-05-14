@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator, computed_field
-# from lks_idprovider_keycloak.config import KeycloakConfig
-# from lks_idprovider_keycloak.provider import KeycloakProvider
 
 # Load environment variables from .env file
 load_dotenv()
@@ -91,7 +89,7 @@ class Settings(BaseSettings):
         env="KEYCLOAK_SERVER_URL"
     )
     keycloak_realm: str = Field(
-        default="lks",
+        default="tetrics",
         env="KEYCLOAK_REALM"
     )
     keycloak_client_id: str = Field(
@@ -104,26 +102,6 @@ class Settings(BaseSettings):
     )
     keycloak_verify_token: bool = Field(default=True, env="KEYCLOAK_VERIFY_TOKEN")
     
-    # COMMENTED OUT - Keycloak not needed for now
-    # def get_identity_provider(self) -> KeycloakProvider:
-    #     """Get a new Keycloak identity provider instance."""
-    #     config = KeycloakConfig(
-    #         base_url=self.keycloak_server_url,
-    #         realm=self.keycloak_realm,
-    #         client_id=self.keycloak_client_id,
-    #         client_secret=self.keycloak_client_secret,
-    #         timeout=30,  # Default timeout
-    #         verify_ssl=False,  # Default SSL verification
-    #         use_token_introspection=True,
-    #         use_userinfo_endpoint=True,
-    #         validate_audience=True,
-    #         validate_issuer=True
-    #     )
-    #     return KeycloakProvider(config=config)
-    
-    def get_identity_provider(self):
-        """Placeholder - Keycloak disabled for now."""
-        return None
 
     
     # Logging Configuration

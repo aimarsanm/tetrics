@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '../ui/textarea';
 import { formatApiError } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import type { Measurement } from '@/lib/data';
 
 interface AddMeasurementDialogProps {
@@ -22,7 +23,6 @@ interface AddMeasurementDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddMeasurement: (
     value: number,
-    evaluator: string,
     notes: string,
     llmToolConfigId: string,
     metricId: string
@@ -32,6 +32,7 @@ interface AddMeasurementDialogProps {
   metricName: string;
   toolName: string;
   existingMeasurement?: Measurement;
+  evaluator: string;
 }
 
 export function AddMeasurementDialog({
@@ -43,33 +44,31 @@ export function AddMeasurementDialog({
   metricName,
   toolName,
   existingMeasurement,
+  evaluator,
 }: Readonly<AddMeasurementDialogProps>) {
   const [value, setValue] = useState('');
-  const [evaluator, setEvaluator] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   // Pre-fill form when editing existing measurement
   useEffect(() => {
     if (existingMeasurement) {
       setValue(String(existingMeasurement.value));
-      setEvaluator(existingMeasurement.evaluator);
       setNotes(existingMeasurement.notes || '');
     } else {
       setValue('');
-      setEvaluator('');
       setNotes('');
     }
   }, [existingMeasurement, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (value.trim() && evaluator.trim()) {
+    if (value.trim()) {
       setIsSubmitting(true);
       try {
         await onAddMeasurement(
           parseFloat(value),
-          evaluator.trim(),
           notes.trim(),
           llmToolConfigId,
           metricId
@@ -77,7 +76,6 @@ export function AddMeasurementDialog({
 
         // Reset form
         setValue('');
-        setEvaluator('');
         setNotes('');
         onOpenChange(false);
       } catch (error) {
@@ -86,7 +84,7 @@ export function AddMeasurementDialog({
           error,
           'Failed to add measurement. Please try again.'
         );
-        
+
         toast({
           title: 'Error',
           description: errorMessage,
@@ -131,10 +129,9 @@ export function AddMeasurementDialog({
               <Input
                 id="evaluator"
                 value={evaluator}
-                onChange={(e) => setEvaluator(e.target.value)}
-                className="col-span-3"
-                placeholder="Your name or system"
-                required
+                className="col-span-3 bg-muted text-muted-foreground"
+                disabled
+                readOnly
               />
             </div>
             <div className="grid grid-cols-4 items-start gap-4">

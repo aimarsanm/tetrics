@@ -1,5 +1,7 @@
 'use client';
 
+import { getAccessToken, logout } from './auth';
+
 // API configuration
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -44,27 +46,37 @@ function handleValidationError(error: ApiError): string | null {
   if (error.status !== 422 || !error.details) {
     return null;
   }
-  
+
   if (Array.isArray(error.details)) {
     return formatValidationErrors(error.details, error.message);
   }
-  
+
   if (typeof error.details === 'string') {
     return error.details;
   }
-  
+
   return null;
 }
 
 // Utility function to format API errors for user display
 export function formatApiError(error: unknown, defaultMessage: string): string {
   if (error instanceof ApiError) {
+    // Handle auth errors
+    if (error.status === 401) {
+      logout();
+      return 'Your session has expired. Please sign in again.';
+    }
+
+    if (error.status === 403) {
+      return 'You need administrator permissions to perform this action.';
+    }
+
     // Try handling as validation error first
     const validationError = handleValidationError(error);
     if (validationError) {
       return validationError;
     }
-    
+
     // Try extracting detail from error details
     if (error.details) {
       const detail = extractDetailFromErrorDetails(error.details);
@@ -72,14 +84,14 @@ export function formatApiError(error: unknown, defaultMessage: string): string {
         return detail;
       }
     }
-    
+
     return error.message;
   }
-  
+
   if (error instanceof Error) {
     return error.message || defaultMessage;
   }
-  
+
   return defaultMessage;
 }
 
@@ -89,16 +101,20 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
-  const defaultHeaders = {
+
+  const token = await getAccessToken();
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(url, {
       ...options,
-      headers: defaultHeaders,
+      headers,
     });
 
     if (!response.ok) {
@@ -111,7 +127,12 @@ async function apiFetch<T>(
         data: errorData,
         requestBody: options.body,
       });
-      // Pass the entire errorData as details (for validation errors, this will be the array)
+
+      // Auto-logout on 401
+      if (response.status === 401) {
+        logout();
+      }
+
       throw new ApiError(
         errorMessage,
         response.status,

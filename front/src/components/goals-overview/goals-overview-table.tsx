@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpDown, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AdminOnlyButton } from '@/components/ui/admin-only-button';
 import type { Goal, LLMToolConfiguration, EvaluationCriterion, AggregatedScore } from '@/lib/data';
 
 interface GoalsOverviewTableProps {
@@ -22,6 +23,7 @@ interface GoalsOverviewTableProps {
   scores: AggregatedScore[];
   onGoalClick?: (goalId: string) => void;
   onEditGoal?: (goal: Goal) => void;
+  canEdit?: boolean;
 }
 
 type SortConfig = {
@@ -41,7 +43,8 @@ export function GoalsOverviewTable({
   criteria, 
   scores, 
   onGoalClick,
-  onEditGoal
+  onEditGoal,
+  canEdit = true
 }: Readonly<GoalsOverviewTableProps>) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
@@ -297,13 +300,15 @@ export function GoalsOverviewTable({
                     </TableCell>
                     {onEditGoal && (
                       <TableCell className="sticky left-[300px] bg-background z-10">
-                        <Button
+                        <AdminOnlyButton
+                          allowed={canEdit}
+                          tooltip="Admin role required to edit goals."
                           variant="ghost"
                           size="sm"
                           onClick={(e) => handleEditClick(e, goal)}
                         >
                           <Edit className="h-4 w-4" />
-                        </Button>
+                        </AdminOnlyButton>
                       </TableCell>
                     )}
                     {sortedLlmTools.map((tool) => {

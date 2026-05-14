@@ -23,8 +23,8 @@ class MeasurementBase(BaseSchema):
         None,
         description="Normalized value for comparison purposes"
     )
-    evaluator: str = Field(
-        ...,
+    evaluator: Optional[str] = Field(
+        None,
         description="Person or system that performed the evaluation",
         min_length=1,
         max_length=255

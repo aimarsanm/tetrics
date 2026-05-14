@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.repositories import MetricRepository
 from app.schemas import MetricCreate, MetricRead, MetricUpdate
 
@@ -19,9 +20,10 @@ METRIC_NOT_FOUND = "Metric not found"
 @router.post("/", response_model=MetricRead)
 def create_metric(
     schema: MetricCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Create a new metric."""
+    """Create a new metric. Admin only."""
     repo = MetricRepository(db)
     return repo.create(schema)
 
@@ -30,7 +32,8 @@ def create_metric(
 def get_metrics(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get all metrics."""
     repo = MetricRepository(db)
@@ -40,7 +43,8 @@ def get_metrics(
 @router.get("/{metric_id}", response_model=MetricRead)
 def get_metric(
     metric_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get metric by ID."""
     repo = MetricRepository(db)
@@ -57,9 +61,10 @@ def get_metric(
 def update_metric(
     metric_id: UUID,
     schema: MetricUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Update a metric."""
+    """Update a metric. Admin only."""
     repo = MetricRepository(db)
     metric = repo.update(metric_id, schema)
     if not metric:
@@ -73,9 +78,10 @@ def update_metric(
 @router.delete("/{metric_id}")
 def delete_metric(
     metric_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Delete a metric."""
+    """Delete a metric. Admin only."""
     repo = MetricRepository(db)
     success = repo.delete(metric_id)
     if not success:

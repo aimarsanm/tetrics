@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.repositories import AggregatedScoreRepository, EvaluationCriterionRepository, MetricRepository
 from app.schemas import (
     AggregatedScoreRead,
@@ -25,9 +26,10 @@ EVALUATION_CRITERION_NOT_FOUND = "Evaluation criterion not found"
 @router.post("/", response_model=EvaluationCriterionRead)
 def create_evaluation_criterion(
     schema: EvaluationCriterionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Create a new evaluation criterion."""
+    """Create a new evaluation criterion. Admin only."""
     repo = EvaluationCriterionRepository(db)
     return repo.create(schema)
 
@@ -36,7 +38,8 @@ def create_evaluation_criterion(
 def get_evaluation_criteria(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get all evaluation criteria."""
     repo = EvaluationCriterionRepository(db)
@@ -46,7 +49,8 @@ def get_evaluation_criteria(
 @router.get("/{criterion_id}", response_model=EvaluationCriterionRead)
 def get_evaluation_criterion(
     criterion_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get evaluation criterion by ID."""
     repo = EvaluationCriterionRepository(db)
@@ -63,9 +67,10 @@ def get_evaluation_criterion(
 def update_evaluation_criterion(
     criterion_id: UUID,
     schema: EvaluationCriterionUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Update an evaluation criterion."""
+    """Update an evaluation criterion. Admin only."""
     repo = EvaluationCriterionRepository(db)
     criterion = repo.update(criterion_id, schema)
     if not criterion:
@@ -73,7 +78,6 @@ def update_evaluation_criterion(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=EVALUATION_CRITERION_NOT_FOUND
         )
-    # Debug log for aggregation strategy persistence
     try:
         print(f"[UPDATE] Criterion {criterion_id} aggregation_strategy now: {criterion.aggregation_strategy}")
     except Exception as _e:
@@ -84,9 +88,10 @@ def update_evaluation_criterion(
 @router.delete("/{criterion_id}")
 def delete_evaluation_criterion(
     criterion_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Delete an evaluation criterion."""
+    """Delete an evaluation criterion. Admin only."""
     repo = EvaluationCriterionRepository(db)
     success = repo.delete(criterion_id)
     if not success:
@@ -100,7 +105,8 @@ def delete_evaluation_criterion(
 @router.get("/{criterion_id}/metrics", response_model=List[MetricRead])
 def get_metrics_by_criterion(
     criterion_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get metrics by evaluation criterion ID."""
     repo = MetricRepository(db)
@@ -110,7 +116,8 @@ def get_metrics_by_criterion(
 @router.get("/{criterion_id}/aggregated-scores", response_model=List[AggregatedScoreRead])
 def get_scores_by_criterion(
     criterion_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get aggregated scores by criterion ID."""
     repo = AggregatedScoreRepository(db)
@@ -120,14 +127,15 @@ def get_scores_by_criterion(
 @router.post("/{criterion_id}/recalculate-scores", response_model=List[AggregatedScoreRead])
 def recalculate_criterion_scores(
     criterion_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
     """
     Recalculate all aggregated scores for a specific criterion across all tool configurations.
-    This should be called after updating criterion weights or aggregation strategy.
+    Admin only.
     """
     from app.services.score_aggregation import ScoreAggregationService
-    
+
     print(f"[RECALC] Recalculating scores for criterion {criterion_id}")
     service = ScoreAggregationService(db)
     try:

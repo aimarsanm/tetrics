@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.auth import get_current_user, requires_role, UserContext
 from app.repositories import AggregatedScoreRepository, LLMToolConfigurationRepository, MeasurementRepository
 from app.schemas import (
     AggregatedScoreRead,
@@ -25,9 +26,10 @@ LLM_TOOL_CONFIG_NOT_FOUND = "LLM tool configuration not found"
 @router.post("/", response_model=LLMToolConfigurationRead)
 def create_llm_tool_configuration(
     schema: LLMToolConfigurationCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Create a new LLM tool configuration."""
+    """Create a new LLM tool configuration. Admin only."""
     repo = LLMToolConfigurationRepository(db)
     return repo.create(schema)
 
@@ -36,7 +38,8 @@ def create_llm_tool_configuration(
 def get_llm_tool_configurations(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get all LLM tool configurations."""
     repo = LLMToolConfigurationRepository(db)
@@ -46,7 +49,8 @@ def get_llm_tool_configurations(
 @router.get("/{config_id}", response_model=LLMToolConfigurationRead)
 def get_llm_tool_configuration(
     config_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get LLM tool configuration by ID."""
     repo = LLMToolConfigurationRepository(db)
@@ -63,9 +67,10 @@ def get_llm_tool_configuration(
 def update_llm_tool_configuration(
     config_id: UUID,
     schema: LLMToolConfigurationUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Update an LLM tool configuration."""
+    """Update an LLM tool configuration. Admin only."""
     repo = LLMToolConfigurationRepository(db)
     config = repo.update(config_id, schema)
     if not config:
@@ -79,9 +84,10 @@ def update_llm_tool_configuration(
 @router.delete("/{config_id}")
 def delete_llm_tool_configuration(
     config_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(requires_role("admin")),
 ):
-    """Delete an LLM tool configuration."""
+    """Delete an LLM tool configuration. Admin only."""
     repo = LLMToolConfigurationRepository(db)
     success = repo.delete(config_id)
     if not success:
@@ -95,7 +101,8 @@ def delete_llm_tool_configuration(
 @router.get("/{config_id}/measurements", response_model=List[MeasurementRead])
 def get_measurements_by_configuration(
     config_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get measurements by LLM tool configuration ID."""
     repo = MeasurementRepository(db)
@@ -105,7 +112,8 @@ def get_measurements_by_configuration(
 @router.get("/{config_id}/aggregated-scores", response_model=List[AggregatedScoreRead])
 def get_scores_by_configuration(
     config_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserContext = Depends(get_current_user),
 ):
     """Get aggregated scores by tool configuration ID."""
     repo = AggregatedScoreRepository(db)
