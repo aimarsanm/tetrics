@@ -14,7 +14,7 @@ Actúas como el agente de orquestación central. Tu objetivo es coordinar a dos 
 ## Fase 1: Coordinación del Agente de Diseño
 1. Analiza la solicitud inicial del usuario.
 2. Llama al sub-agente del **@designer** , proporcionale el archivo pasado por el usuario y pásale los requisitos del usuario.
-3. **Espera el resultado:** Obtén los recursos de diseño, el manifiesto de activos y las especificaciones técnicas generadas por este sub-agente, que deben de estar completos en la carpeta `./testagents/plan.md`.
+3. **Espera el resultado:** Obtén los recursos de diseño, el manifiesto de activos y las especificaciones técnicas generadas por este sub-agente, que deben de estar completos en la carpeta `./testagents/plan_{nombre de la clase}.md`.
 
 ## Fase 2: Validación y Traspaso (Handoff)
 **CRÍTICO:** Antes de pasar a la implementación, debes validar los resultados del diseño:
@@ -24,7 +24,7 @@ Actúas como el agente de orquestación central. Tu objetivo es coordinar a dos 
 
 ## Fase 3: Coordinación del Agente de Implementación
 1. Llama al sub-agente del **@implementer**.
-2. Cogé las especificaciones de diseño validadas en la Fase 2 de `./testagents/plan.md`.
+2. Cogé las especificaciones de diseño validadas en la Fase 2 de `./testagents/plan_{nombre de la clase}.md`.
 3. **Espera el resultado:** Obtén la confirmación del código generado.
 
 ## Fase 4: Síntesis de Resultados
@@ -33,7 +33,7 @@ Actúas como el agente de orquestación central. Tu objetivo es coordinar a dos 
    - Los enlaces a los diseños finales.
    - El estado de la implementación o las tareas creadas.
    - Cualquier decisión técnica tomada durante el proceso.
-3. Asegurate de que el resumne unificado se guarde en `./testagents/summary.md` para referencia futura.
+3. Asegurate de que el resumne unificado se guarde en `./testagents/summary_{nombre de la clase}.md` para referencia futura.
 
 ## Resolución de Errores
 **Error:** El Agente de Diseño no devuelve especificaciones claras.

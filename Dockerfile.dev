@@ -33,8 +33,9 @@ RUN poetry config http-basic.lks-next-all "$NEXUS_USER" "$NEXUS_PASSWORD" && \
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install Python dependencies
-RUN poetry install
+# Install Python dependencies (including dev tools like pytest via pip since package-mode=false)
+RUN poetry install && \
+    pip install pytest pytest-asyncio pytest-cov pytest-httpx httpx black isort ruff mypy
 
 # Create logs directory
 RUN mkdir -p logs
